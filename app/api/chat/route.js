@@ -7,9 +7,19 @@ const client = new HfInference(process.env.HUGGINGFACE_API_KEY);
 const systemPrompt = "How can I help you today?";
 
 // Define a function to perform the text generation request
+const previous_prompts = [];
+
 async function getTextGeneration(prompt) {
     try {
         // Make the text generation request with a valid model
+        prompt_context = "You're a customer support agent for a tech company named 'PAAW'. You're helping a customer troubleshoot an issue with their computer. The customer says: 'My computer is running slow and I don't know why. Can you help me?' You're the customer support agent and you need to provide a helpful response to the customer. Here is the Question, answer it and always take a look at the context: \n\n";
+        prompt_context += prompt;
+        prompt_context += "\n\nHere are the previous prompts and their answer for the context\n\n"
+        for (let i = 0; i < previous_prompts.length; i++) {
+            prompt_context += previous_prompts[i] + "\n\n";
+        }
+        prompt = prompt_context;
+        previous_prompts.push(prompt);
         const response = await client.textGeneration({
             model: "microsoft/Phi-3-mini-4k-instruct", // Use a valid model for text generation
             inputs: prompt,
@@ -19,7 +29,7 @@ async function getTextGeneration(prompt) {
                 top_k: 50, // Top-k sampling
             },
         });
-
+        previous_prompts.push(response.generated_text);
         // Log the response
         console.log('API Response:', response);
 
