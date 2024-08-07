@@ -6,7 +6,7 @@ const client = new HfInference(process.env.HUGGINGFACE_API_KEY);
 
 const systemPrompt = "How can I help you today?";
 
-previous_prompts = [];
+const previous_prompts = [];
 
 // Define a function to perform the text generation request
 async function getTextGeneration(prompt) {
