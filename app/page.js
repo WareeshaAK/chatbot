@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Box, Stack, TextField, Button } from '@mui/material';
 import { styled } from '@mui/system';
+import './styles.css';  // Make sure to import the CSS file
 
 // Styled components for better UI
 const SideBox = styled(Box)({
@@ -43,12 +44,11 @@ const ChatBox = styled(Stack)({
     overflowY: 'auto',
     boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
     marginBottom: '8px',
-    // Add Firacode font
     fontFamily: 'Fira Code, monospace',
     flexGrow: 1,
 });
 
-const MessageBubble = styled(Box)(({ theme, role }) => ({
+const MessageBubble = styled(Box)(({ role }) => ({
     backgroundColor: role === 'assistant' ? '#6666ff' : '#0066ff',
     color: '#fff',
     borderRadius: '16px',
@@ -75,19 +75,31 @@ const InputField = styled(TextField)({
     fontFamily: 'Fira Code, monospace',
 });
 
+const LoadingDots = () => (
+    <div className="loading-dots">
+        <div></div>
+        <div></div>
+        <div></div>
+    </div>
+);
+
 export default function Home() {
     const [messages, setMessages] = useState([
         { role: 'assistant', content: "Welcome to PAAW Customer Support!" }
     ]);
     const [input, setInput] = useState('');
+    const [isLoading, setIsLoading] = useState(false); // Add loading state
     const endOfChatRef = useRef(null);
 
     const sendMessage = async () => {
-        try {
-            const newMessage = { role: 'user', content: input };
-            setMessages([...messages, newMessage]);
-            setInput('');
+        if (!input.trim()) return;
 
+        const newMessage = { role: 'user', content: input };
+        setMessages(prevMessages => [...prevMessages, newMessage]);
+        setInput('');
+        setIsLoading(true); // Set loading to true when message is sent
+
+        try {
             const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: {
@@ -95,10 +107,19 @@ export default function Home() {
                 },
                 body: JSON.stringify({ query: input }),
             });
+
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+
             const data = await response.json();
-            setMessages([...messages, newMessage, { role: 'assistant', content: data.data.generated_text }]);
+            const assistantMessage = { role: 'assistant', content: data.data.generated_text };
+
+            setMessages(prevMessages => [...prevMessages, assistantMessage]);
         } catch (error) {
             console.error('Error:', error);
+        } finally {
+            setIsLoading(false); // Set loading to false after processing
         }
     };
 
@@ -107,14 +128,11 @@ export default function Home() {
     }, [messages]);
 
     return (
-
         <ChatContainer>
             <SideBox>
-                <h2>PAAW Customer Support
-                </h2>
+                <h2>PAAW Customer Support</h2>
                 <br />
                 <br />
-                
                 <div>
                     Chat with our assistant to get help!
                     <ul>
@@ -131,16 +149,20 @@ export default function Home() {
                 <div className='top-heading'>
                     <h3>PAAW Assistant</h3>
                 </div>
-                
                 <Stack direction="column" spacing={2} flexGrow={1}>
                     {messages.map((message, index) => (
                         <MessageBubble key={index} role={message.role}>
                             {message.content}
                         </MessageBubble>
                     ))}
+                    {isLoading && (
+                        <MessageBubble role='assistant'>
+                            <LoadingDots />
+                        </MessageBubble>
+                    )}
                     <div ref={endOfChatRef} /> {/* For auto-scrolling */}
                 </Stack>
-                <InputContainer style={{fontFamily: 'Fira Code, monospace'}}>
+                <InputContainer>
                     <InputField 
                         label="Type your message..."
                         fullWidth
@@ -153,9 +175,8 @@ export default function Home() {
                             }
                         }}
                         variant="outlined"
-                        
                     />
-                    <Button variant="contained" style={{fontFamily: 'Fira Code, monospace', minWidth: '100px' }} onClick={sendMessage}>
+                    <Button variant="contained" style={{ minWidth: '100px' }} onClick={sendMessage}>
                         Send
                     </Button>
                 </InputContainer>
@@ -163,4 +184,3 @@ export default function Home() {
         </ChatContainer>
     );
 }
-
